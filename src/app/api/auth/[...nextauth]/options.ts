@@ -22,22 +22,22 @@ export const authOptions: NextAuthOptions = {
                 try {
                     const user = await UserModel.findOne({
                         $or: [
-                            {email: credentials.identifier},
-                            {password: credentials.identifier}
+                            { email: credentials.identifier },
+                            { password: credentials.identifier }
                         ]
                     })
 
                     if (!user) {
                         throw new Error('No user found with this email')
                     }
-                    
+
                     if (!user.isVerified) {
                         throw new Error('Please verify your account first then try to login again')
                     }
 
-                    const isPasswordCorrect = await bcrypt.compare(credentials.password,user.password)
+                    const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password)
 
-                    if(isPasswordCorrect) {
+                    if (isPasswordCorrect) {
                         return user
                     } else {
                         throw new Error('Invalid password')
@@ -58,7 +58,26 @@ export const authOptions: NextAuthOptions = {
 
     pages: {
         signIn: '/sign-in',
-    }
+    },
 
-    
+    callbacks: {
+        async jwt({ token, user }) {
+            if (user) {
+                token._id = user._id?.toString(); // Convert ObjectId to string
+                token.isVerified = user.isVerified;
+                token.isAcceptingMessages = user.isAcceptingMessages;
+                token.username = user.username;
+            }
+            return token;
+        },
+        async session({ session, token }) {
+            if (token) {
+                session.user._id = token._id;
+                session.user.isVerified = token.isVerified;
+                session.user.isAcceptingMessages = token.isAcceptingMessages;
+                session.user.username = token.username;
+            }
+            return session;
+        },
+    }
 }
